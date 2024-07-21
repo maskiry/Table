@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <iomanip>
 #include <fstream>
+#include <set>
 
 void split_string(string input, std::vector<string>& output, char sep=' '){
     string tmp="";
@@ -88,12 +89,35 @@ int fill_tab(string adrs, Table& tb){
     return 0;
 }
 
+void fillWithRandom(int N, Table& tb){
+    std::set<int> par;
+    int num_par;
+    int min = -99, max = 99;
+    for (int i = 0; i < N; i++){
+        int a = rand()%(max-min+1)+min;
+        int n=rand()%(num_par+1);
+        int parent=0, cntr=0;
+        for (int p: par){
+            if (cntr==n){
+                parent=p;
+                break;
+            }
+            cntr++;
+        }
+        tb.add(parent, a, std::to_string(a), a, std::to_string(a));
+        // std::cout << "insert with par = " << parent << "; inf = " << a << "\n";
+        par.insert(a);
+        num_par++;
+    }
+}
+
 void menu(Table& tb){
     int com, key1, par, code,a,b;
     float num;
     string s, key2, gr;
     gr="input command: 0 - out, 1 - add, 2 - del by key1, 3 - del by key2, 4 - del by key1 and key2,\n\
-5 - find by key1, 6- find by key2, 7 - find by key1 and key2, 8 - slice by parent, 9 - output: \n";
+5 - find by key1, 6- find by key2, 7 - find by key1 and key2, 8 - slice by parent, 9 - output,\
+10 - cache effective, 11 - random fill, 12 - clear: \n";
     std::cout << gr;
     std::cin >> com;
     while (com){
@@ -173,26 +197,35 @@ void menu(Table& tb){
         else if (com==10){
             std::cout << "cache eff = " << tb.get_stat() << "\n";
         }
+        else if (com==11){
+            int N;
+            std::cout << "input number of elements: ";
+            std::cin >> N;
+            fillWithRandom(N, tb);
+        }
+        else if (com==12){
+            tb.clear();
+        }
         else std::cout << gr;
         std::cout << "\ninput command: ";
         std::cin >> com;
     }
-    
 }
 
 int main(){
-    std::cout << "begin\n";
+    std::cout << "begin; intput table size: ";
     int size;
     std::cin >> size;
     Table tb(size);
     fill_tab("input.txt", tb);
-    std::cout << tb;
-    Table tb2(tb.slice_by_parent(1,10));
-    std::cout << tb2;
-    int x=7;
-    std::cout << "with key1=" << x << ": " << tb[x];
-    std::cout << "with key2=w: " << tb[(string) "w"];
-    std::cout << "with key1=20002463, key2=q3rjqhbf: " << tb[(string) "q3rjqhbf"][20002463];
+    // std::cout << tb;
+    // Table tb2(tb.slice_by_parent(1,10));
+    // std::cout << tb2;
+    // int x=7;
+
+    // std::cout << "with key1=" << x << ": " << tb[x];
+    // std::cout << "with key2=w: " << tb[(string) "w"];
+    // std::cout << "with key1=20002463, key2=q3rjqhbf: " << tb[(string) "q3rjqhbf"][20002463];
 
     menu(tb);
     

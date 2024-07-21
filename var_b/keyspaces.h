@@ -204,6 +204,7 @@ struct KeySpace1{
     friend Cache;
     friend Bank;
     private:
+
         int offset_next;
         int offset_item;
         int key;

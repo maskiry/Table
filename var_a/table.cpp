@@ -210,6 +210,7 @@ int Table::del(int key1, string key2){
             KeySpace1* temp;
             temp=(actual->next);
             actual->next=temp->next;
+            last=actual;
             delete temp;
         }
         else{

@@ -171,7 +171,7 @@ class Table{
         MyIter& get_iter() const;
         Table slice_by_parent(int a, int b);
         float get_stat(){
-            return cache->external_mem_req/cache->all_req;
+            return 1-cache->external_mem_req/cache->all_req;
         }
 
         Table& operator = (const Table& other){
@@ -249,7 +249,8 @@ class Table{
                 itr->cache=cache;
                 return *(itr);
             };
-            throw std::out_of_range("No such element");
+            string err_msg = "table[(int) " + std::to_string(key1) + "]: No such element";
+            throw std::out_of_range(err_msg);
         };
         MyIter& operator [](string key2){
             KeySpace2 ksp2=find_in_KS2(key2);
@@ -260,7 +261,8 @@ class Table{
                 itr->cache=cache;
                 return *(itr);
             };
-            throw std::out_of_range("No such element");
+            string err_msg = "table[(string) " + key2 + "]: No such element";
+            throw std::out_of_range(err_msg);
         };
 
 };

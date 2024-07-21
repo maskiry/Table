@@ -37,26 +37,36 @@ private:
     template <class T>
     int update_one_rec(int offset, int offset_idx, FILE* f, int* adrs, T* rec, int mode/*1 - for read, 2 - for write*/){
         if (offset<0) {
-            return -1;
+            throw std::runtime_error("offset must be >=0");
         }
         fseek(f, 0, SEEK_END);
         if (ftell(f)<=offset*sizeof(*rec)) {
-            std::cout << "error in update_one_rec: offset is bigger then msize (" << ftell(f) << "<=" << sizeof(*rec) << ")\n";
+            std::cout << "error in update_one_rec: offset is bigger then msize (" << ftell(f) << "<=" << offset 
+                      << "*" << sizeof(*rec) << "; type is " << typeid(*rec).name() << "; mode = " << mode
+                      << ")\n";
             return -1;
         }
         if (adrs[offset_idx]>-1){
+            int k;
             fseek(f, adrs[offset_idx]*sizeof(*rec), SEEK_SET);
-            fwrite(rec+offset_idx, sizeof(*rec), 1, f);
+            k=fwrite(&rec[offset_idx], sizeof(*rec), 1, f);
+            if (k!=1){
+                string err_msg="error in update_one_rec: writing failed (expexted to write: 1, but writing " + 
+                                std::to_string(k) + "; type is " + typeid(*rec).name() + "; mode = " + std::to_string(mode)
+                                + ")\n";
+                throw std::runtime_error(err_msg);
+            }
         }
-        if (mode==1){
-            adrs[offset_idx]=offset;
-            fseek(f, offset*sizeof(*rec), SEEK_SET);
-            fread(&rec[offset_idx], sizeof(*rec), 1, f);
+        int k;
+        adrs[offset_idx]=offset;
+        fseek(f, offset*sizeof(*rec), SEEK_SET);
+        k=fread(&rec[offset_idx], sizeof(*rec), 1, f);
+        if (k!=1){
+            string err_msg="error in update_one_rec: reading failed (expexted to read: 1, but reading " + 
+                            std::to_string(k) + "; type is " + typeid(*rec).name() + "; mode = " + std::to_string(mode)
+                            + ")\n";
+            throw std::runtime_error(err_msg);
         }
-        else {
-            adrs[offset_idx]=-1;
-        }
-
         return 0;
     }
 

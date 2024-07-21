@@ -11,7 +11,7 @@ msize(msize), csize(0), hash(msize) {
     ks1=fopen(name_ks1.c_str(), "w+b");
     name_ks2 = "KeySpace2_"+std::to_string(id);
     ks2=fopen(name_ks2.c_str(), "w+b");
-    cache = new Cache(ks1, ks2, info, item, 5);
+    cache = new Cache(ks1, ks2, info, item, 2);
     offset_ks1=0;
     offset_last=0;
 
@@ -33,7 +33,7 @@ msize(msize), csize(0), hash(msize) {
         fwrite(&itm, sizeof(Item), 1, item);
     }
 
-    Information inf(0, "hui");
+    Information inf(0, "");
     rewind(info);
     for (int i=0; i<msize; i++){
         fwrite(&inf, sizeof(Information), 1, info);
@@ -178,6 +178,7 @@ void Table::free_mem(){
         delete rem;
     }
     fs_ks1=act;
+    fs_ks1->offset=-1;
     act=fs_item;
     while (act->next!=nullptr){
         FreeSpace* rem=act;
@@ -185,6 +186,7 @@ void Table::free_mem(){
         delete rem;
     }
     fs_item=act;
+    fs_info->offset=-1;
     act=fs_info;
     while (act->next!=nullptr){
         FreeSpace* rem=act;
@@ -192,6 +194,7 @@ void Table::free_mem(){
         delete rem;
     }
     fs_info=act;
+    fs_info->offset=-1;
     csize=0;
 }
 
@@ -204,23 +207,32 @@ void Table::clear(){
     ks2=fopen(name_ks2.c_str(), "w+b");
     cache->reset_cache(ks1, ks2, info, item);
     offset_ks1=0; offset_last=0;
+    *itr = MyIter(0,"", -1,-1,-1);
 
     KeySpace1 ksp1(0,0,-1,-1);
     rewind(ks1);
-    fwrite(&ksp1, sizeof(KeySpace1), msize, ks1);
-
+    for (int i=0; i<msize+1; i++){
+        fwrite(&ksp1, sizeof(KeySpace1), 1, ks1);
+    }
+    
     KeySpace2 ksp2("", -1);
     rewind(ks2);
-    fwrite(&ksp2, sizeof(KeySpace2), msize, ks2);
-
+    for (int i=0; i<msize; i++){
+        fwrite(&ksp2, sizeof(KeySpace2), 1, ks2);
+    }
+    
     Item itm(0, "", -1);
     rewind(item);
-    fwrite(&itm, sizeof(Item), msize, item);
-
+    for (int i=0; i<msize; i++){
+        fwrite(&itm, sizeof(Item), 1, item);
+    }
+    
     Information inf(0, "");
     rewind(info);
-    fwrite(&inf, sizeof(Information), msize, info);
-
+    for (int i=0; i<msize; i++){
+        fwrite(&inf, sizeof(Information), 1, info);
+    }
+    
     FreeSpace *temp;
     for (int i=msize; i>0; i--){
         temp = new FreeSpace(i, fs_ks1);
@@ -328,6 +340,10 @@ int Table::add(int par, int key1, string key2, float num_info, string str_info){
     int pos_info, code;
     Information inf(num_info, str_info);
     pos_info=fs_info->offset;
+    if (pos_info==-1){
+        string err_msg = "table.add(int, string, float, string): something went wrong (not enough place)";
+        throw std::runtime_error(err_msg);
+    }
     code = cache->write_record(pos_info, inf);
     if (code) {
         throw  ("add: cant write record into info; code = " + std::to_string(code));
@@ -336,7 +352,7 @@ int Table::add(int par, int key1, string key2, float num_info, string str_info){
     int pos_item;
     Item it(key1, key2, pos_info);
     pos_item=fs_item->offset;
-    
+
     it.offset_p1 = add_in_KS1(key1, par, pos_item);
     it.offset_p2 = add_in_KS2(key2, pos_item);
 
@@ -352,11 +368,11 @@ int Table::add(int par, int key1, string key2, float num_info, string str_info){
         throw  ("add: cant write record into item; code = " + std::to_string(code));
     }
 
+    // cache->save_cache();
     csize++;
 
     return 0;
 }
-
 
 int Table::add_in_KS1(int key, int par, int offset_item){
     int pos_ks1, code;
@@ -545,9 +561,8 @@ Table Table::slice_by_parent(int a, int b){
     Table out(msize);
     KeySpace1 actual;
     cache->read_record(offset_ks1, actual);
-    if (actual.offset_next==-1) return out;
-    cache->read_record(actual.offset_next, actual);
     while (actual.offset_next>=0){
+        cache->read_record(actual.offset_next, actual);
         if (actual.par>=a && actual.par<b){
             Item it;
             Information inform;
@@ -556,7 +571,6 @@ Table Table::slice_by_parent(int a, int b){
             if (out.find_in_KS1(actual.par).offset_item>=0) out.add(actual.par, it.key1, it.key2.to_str(), inform.number, inform.str.to_str());
             else out.add(0, it.key1, it.key2.to_str(), inform.number, inform.str.to_str());
         }
-        cache->read_record(actual.offset_next, actual);
     }
     return out;
 }
